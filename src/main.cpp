@@ -22,19 +22,17 @@
 
 using namespace std;
 
-// ------------------------------------------------------
-// Configuration Constants
-// ------------------------------------------------------
-static const unsigned int WINDOW_WIDTH  = 960;
-static const unsigned int WINDOW_HEIGHT = 600;
-static const float BAR_GAP = 2.0f; // Gap between bars in pixels
+// Window and layout settings
+static const unsigned int kWindowWidth  = 960;
+static const unsigned int kWindowHeight = 600;
+static const float kBarGap = 2.0f;
 
-// Default sorting parameters
-static const int DEFAULT_NUMBER_OF_BARS = 100;
-static chrono::milliseconds DEFAULT_SORT_DELAY(15);
+// Default sort settings
+static const int kDefaultBarCount = 100;
+static chrono::milliseconds kDefaultSortDelay(15);
 
-// Names and details for each algorithm
-static const char* ALGORITHM_NAMES[] = {
+// Names and info for each sorting algorithm
+static const char* algorithmNames[] = {
     "Bubble Sort",
     "Insertion Sort",
     "Quick Sort",
@@ -47,354 +45,302 @@ static const char* ALGORITHM_NAMES[] = {
     "Odd-Even Sort"
 };
 
-static const char* ALGORITHM_DETAILS[] = {
-    "Bubble Sort Detailed Steps:\n"
-    "1. Compare adjacent elements and swap them if they are out of order.\n"
-    "2. Continue comparing and swapping for the entire array.\n"
-    "3. After each pass, the largest unsorted element bubbles up to its correct position.\n"
-    "4. Repeat until no swaps are needed.",
-    "Insertion Sort Detailed Steps:\n"
-    "1. Start from the second element (the key).\n"
-    "2. Compare the key with elements before it and shift larger elements to the right.\n"
-    "3. Insert the key into its correct position.\n"
-    "4. Repeat for all elements until the array is sorted.",
-    "Quick Sort Detailed Steps:\n"
-    "1. Choose a pivot (commonly the last element).\n"
-    "2. Partition the array so that all elements less than the pivot come before it and all greater come after.\n"
-    "3. Place the pivot in its final sorted position.\n"
-    "4. Recursively apply the above steps to the sub-arrays on either side of the pivot.",
-    "Merge Sort Detailed Steps:\n"
-    "1. Divide the array into two roughly equal halves.\n"
-    "2. Recursively sort each half.\n"
-    "3. Merge the two sorted halves into one sorted array.\n"
-    "4. Repeat until the entire array is merged into a sorted sequence.",
-    "Heap Sort Detailed Steps:\n"
-    "1. Build a max heap from the array.\n"
-    "2. Swap the root (maximum element) with the last element of the heap.\n"
-    "3. Reduce the heap size and heapify the new root to maintain the max heap property.\n"
-    "4. Repeat until the heap size is 1 (sorted array).",
-    "Selection Sort Detailed Steps:\n"
-    "1. Find the minimum element in the unsorted portion of the array.\n"
-    "2. Swap it with the first unsorted element.\n"
-    "3. Move the boundary of the sorted portion one element to the right.\n"
-    "4. Repeat until the entire array is sorted.",
-    "Shell Sort Detailed Steps:\n"
-    "1. Start with a gap (commonly half the array size).\n"
-    "2. Perform a gapped insertion sort for the current gap value.\n"
-    "3. Reduce the gap (often by half) and repeat the process.\n"
-    "4. When the gap becomes 1, perform a final insertion sort.",
-    "Cocktail Sort Detailed Steps:\n"
-    "1. Traverse the array from left to right, swapping adjacent elements if necessary.\n"
-    "2. Then traverse from right to left, again swapping where needed.\n"
-    "3. Continue alternating forward and backward passes until no swaps occur.\n"
-    "4. The array is sorted when a full cycle makes no swaps.",
-    "Comb Sort Detailed Steps:\n"
-    "1. Initialize the gap to the length of the array.\n"
-    "2. Reduce the gap by a shrink factor (typically 1.3) until it becomes 1.\n"
-    "3. Compare elements that are 'gap' apart and swap if they are in the wrong order.\n"
-    "4. Repeat until a complete pass is made with no swaps.",
-    "Odd-Even Sort Detailed Steps:\n"
-    "1. In the even phase, compare and swap adjacent pairs starting from index 0.\n"
-    "2. In the odd phase, do the same starting from index 1.\n"
-    "3. Repeat both phases until no swaps occur in a complete cycle.\n"
-    "4. The array is sorted when a full pass results in no swaps."
+static const char* algorithmDescriptions[] = {
+    "Bubble Sort:\n1. Compare neighboring numbers and swap if needed.\n2. Repeat for the entire list until sorted.",
+    "Insertion Sort:\n1. Start from the second number.\n2. Shift larger numbers right and insert the key in place.",
+    "Quick Sort:\n1. Pick a pivot.\n2. Rearrange numbers around the pivot.\n3. Recursively sort the partitions.",
+    "Merge Sort:\n1. Split the list into halves.\n2. Sort each half and merge them back together.",
+    "Heap Sort:\n1. Build a max heap from the numbers.\n2. Swap the root with the last element, reduce heap size, and heapify.",
+    "Selection Sort:\n1. Find the smallest number in the unsorted part.\n2. Swap it with the first unsorted number.",
+    "Shell Sort:\n1. Use a gap to compare elements far apart.\n2. Reduce the gap until it becomes 1 and finish with insertion sort.",
+    "Cocktail Sort:\n1. Traverse forward swapping when needed, then backward.\n2. Continue until no swaps are required.",
+    "Comb Sort:\n1. Start with a large gap and reduce it gradually.\n2. Compare and swap distant numbers until the list is sorted.",
+    "Odd-Even Sort:\n1. Alternate between comparing odd-even and even-odd pairs.\n2. Keep doing this until the list is in order."
 };
 
-// ------------------------------------------------------
-// Utility Function: Check if an array is sorted
-// ------------------------------------------------------
-static bool isArraySorted(const vector<int>& array) {
-    for (size_t i = 0; i < array.size() - 1; i++) {
-        if (array[i] > array[i + 1])
+// A simple helper to check if a vector is already sorted.
+static bool isSorted(const vector<int>& nums) {
+    for (size_t i = 0; i < nums.size() - 1; i++) {
+        if (nums[i] > nums[i + 1])
             return false;
     }
     return true;
 }
 
-// ------------------------------------------------------
-// Base class for Sorting Algorithms (Abstract)
-// ------------------------------------------------------
-class Sorter {
+// ---------------------------------------------------------------------
+// Abstract base class for our sorting algorithms.
+// ---------------------------------------------------------------------
+class SortAlgorithm {
 public:
-    // Constructor accepts the data to be sorted.
-    Sorter(vector<int>& dataRef) : data(dataRef), comparisons(0), swaps(0), finished(false) {}
-    virtual ~Sorter() {}
+    SortAlgorithm(vector<int>& nums) 
+        : numbers(nums), numComparisons(0), numSwaps(0), done(false) {}
+    virtual ~SortAlgorithm() {}
 
-    // Perform one step of the sorting algorithm.
     virtual void step() = 0;
 
-    // Should return true if sorting is complete.
-    bool isFinished() const { return finished; }
+    bool isDone() const { return done; }
+    long long getComparisons() const { return numComparisons; }
+    long long getSwaps() const { return numSwaps; }
+    const vector<int>& getNumbers() const { return numbers; }
 
-    // Returns the number of comparisons and swaps.
-    long long getComparisons() const { return comparisons; }
-    long long getSwaps() const { return swaps; }
-
-    // Returns the current state of the data.
-    const vector<int>& getData() const { return data; }
-
-    // Returns whether a given index is actively being operated on (to be highlighted).
-    virtual bool isIndexHighlighted(int index) const = 0;
+    // This helps highlight which indices are being worked on.
+    virtual bool isIndexActive(int idx) const = 0;
 
 protected:
-    vector<int>& data;  // Reference to the array being sorted.
-    long long comparisons;
-    long long swaps;
-    bool finished;
+    vector<int>& numbers;
+    long long numComparisons;
+    long long numSwaps;
+    bool done;
 };
 
-// ------------------------------------------------------
+// ---------------------------
 // Bubble Sort Implementation
-// ------------------------------------------------------
-class BubbleSorter : public Sorter {
+// ---------------------------
+class BubbleSort : public SortAlgorithm {
 public:
-    BubbleSorter(vector<int>& dataRef) 
-        : Sorter(dataRef), i(0), j(0) {}
+    BubbleSort(vector<int>& nums) 
+        : SortAlgorithm(nums), passIndex(0), currentIndex(0) {}
 
     void step() override {
-        if (i >= static_cast<int>(data.size()) - 1) {
-            finished = true;
+        if (passIndex >= static_cast<int>(numbers.size()) - 1) {
+            done = true;
             return;
         }
-        comparisons++;
-        if (data[j] > data[j + 1]) {
-            swap(data[j], data[j + 1]);
-            swaps++;
+        numComparisons++;
+        if (numbers[currentIndex] > numbers[currentIndex + 1]) {
+            swap(numbers[currentIndex], numbers[currentIndex + 1]);
+            numSwaps++;
         }
-        j++;
-        if (j >= static_cast<int>(data.size()) - i - 1) {
-            j = 0;
-            i++;
+        currentIndex++;
+        if (currentIndex >= static_cast<int>(numbers.size()) - passIndex - 1) {
+            currentIndex = 0;
+            passIndex++;
         }
-        if (isArraySorted(data))
-            finished = true;
+        if (isSorted(numbers))
+            done = true;
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight the two adjacent indices being compared.
-        return (index == j || index == j + 1);
+    bool isIndexActive(int idx) const override {
+        return (idx == currentIndex || idx == currentIndex + 1);
     }
 
 private:
-    int i, j; // i: pass count, j: current index in pass.
+    int passIndex, currentIndex;
 };
 
-// ------------------------------------------------------
+// -----------------------------
 // Insertion Sort Implementation
-// ------------------------------------------------------
-class InsertionSorter : public Sorter {
+// -----------------------------
+class InsertionSort : public SortAlgorithm {
 public:
-    InsertionSorter(vector<int>& dataRef) 
-        : Sorter(dataRef), i(1), j(0), key(0), keyHeld(false) {}
+    InsertionSort(vector<int>& nums) 
+        : SortAlgorithm(nums), i(1), j(0), key(0), holdingKey(false) {}
 
     void step() override {
-        if (i >= static_cast<int>(data.size())) {
-            finished = true;
+        if (i >= static_cast<int>(numbers.size())) {
+            done = true;
             return;
         }
-        if (!keyHeld) {
-            key = data[i];
+        if (!holdingKey) {
+            key = numbers[i];
             j = i - 1;
-            keyHeld = true;
+            holdingKey = true;
         }
-        if (j >= 0) comparisons++;
-        if (j >= 0 && data[j] > key) {
-            data[j + 1] = data[j];
+        if (j >= 0)
+            numComparisons++;
+        if (j >= 0 && numbers[j] > key) {
+            numbers[j + 1] = numbers[j];
             j--;
-            swaps++;
+            numSwaps++;
         } else {
-            data[j + 1] = key;
+            numbers[j + 1] = key;
             i++;
-            keyHeld = false;
-            swaps++;
+            holdingKey = false;
+            numSwaps++;
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight current key index and the index being compared.
-        return (index == i || index == j);
+    bool isIndexActive(int idx) const override {
+        return (idx == i || idx == j);
     }
 
 private:
     int i, j, key;
-    bool keyHeld;
+    bool holdingKey;
 };
 
-// ------------------------------------------------------
+// -------------------------
 // Quick Sort Implementation
-// ------------------------------------------------------
+// -------------------------
 struct Range {
     int left, right;
 };
 
-class QuickSorter : public Sorter {
+class QuickSort : public SortAlgorithm {
 public:
-    QuickSorter(vector<int>& dataRef) 
-        : Sorter(dataRef), inPartition(false), leftBound(0), rightBound(0), pivotIndex(0)
+    QuickSort(vector<int>& nums) 
+        : SortAlgorithm(nums), inPartition(false), leftBound(0), rightBound(0), pivotIdx(0)
     {
-        stack.push_back({0, static_cast<int>(data.size()) - 1});
+        ranges.push_back({0, static_cast<int>(numbers.size()) - 1});
     }
 
     void step() override {
         if (!inPartition) {
-            if (stack.empty()) {
-                finished = true;
+            if (ranges.empty()) {
+                done = true;
                 return;
             }
-            Range currentRange = stack.back();
-            stack.pop_back();
-            leftBound = currentRange.left;
-            rightBound = currentRange.right;
-            pivotIndex = rightBound;
+            Range current = ranges.back();
+            ranges.pop_back();
+            leftBound = current.left;
+            rightBound = current.right;
+            pivotIdx = rightBound;
             inPartition = true;
             return;
         }
         int p = partition(leftBound, rightBound);
         if (p - 1 > leftBound)
-            stack.push_back({leftBound, p - 1});
+            ranges.push_back({leftBound, p - 1});
         if (p + 1 < rightBound)
-            stack.push_back({p + 1, rightBound});
+            ranges.push_back({p + 1, rightBound});
         inPartition = false;
-        if (isArraySorted(data))
-            finished = true;
+        if (isSorted(numbers))
+            done = true;
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight the pivot element.
-        return (index == pivotIndex);
+    bool isIndexActive(int idx) const override {
+        return (idx == pivotIdx);
     }
 
 private:
-    vector<Range> stack;
+    vector<Range> ranges;
     bool inPartition;
     int leftBound, rightBound;
-    int pivotIndex;
+    int pivotIdx;
 
     int partition(int left, int right) {
-        int pivotValue = data[right];
+        int pivotVal = numbers[right];
         int i = left - 1;
         for (int j = left; j < right; j++) {
-            comparisons++;
-            if (data[j] <= pivotValue) {
+            numComparisons++;
+            if (numbers[j] <= pivotVal) {
                 i++;
-                swap(data[i], data[j]);
-                swaps++;
+                swap(numbers[i], numbers[j]);
+                numSwaps++;
             }
         }
-        swap(data[i+1], data[right]);
-        swaps++;
+        swap(numbers[i + 1], numbers[right]);
+        numSwaps++;
         return i + 1;
     }
 };
 
-// ------------------------------------------------------
+// -------------------------
 // Merge Sort Implementation
-// ------------------------------------------------------
-class MergeSorter : public Sorter {
+// -------------------------
+class MergeSort : public SortAlgorithm {
 public:
-    MergeSorter(vector<int>& dataRef) 
-        : Sorter(dataRef), subarraySize(1), inSubMerge(false), leftStart(0), mid(0), rightEnd(0)
+    MergeSort(vector<int>& nums) 
+        : SortAlgorithm(nums), currentSize(1), merging(false), leftStart(0), mid(0), rightEnd(0)
     {
-        mergeTemp.resize(data.size());
+        temp.resize(numbers.size());
     }
 
     void step() override {
-        if (subarraySize >= static_cast<int>(data.size())) {
-            finished = true;
+        if (currentSize >= static_cast<int>(numbers.size())) {
+            done = true;
             return;
         }
-        if (!inSubMerge) {
-            if (leftStart >= static_cast<int>(data.size()) - 1) {
-                subarraySize *= 2;
+        if (!merging) {
+            if (leftStart >= static_cast<int>(numbers.size()) - 1) {
+                currentSize *= 2;
                 leftStart = 0;
-                if (subarraySize >= static_cast<int>(data.size()))
-                    finished = true;
+                if (currentSize >= static_cast<int>(numbers.size()))
+                    done = true;
                 return;
             }
-            inSubMerge = true;
-            mid = min(leftStart + subarraySize - 1, static_cast<int>(data.size()) - 1);
-            rightEnd = min(leftStart + 2 * subarraySize - 1, static_cast<int>(data.size()) - 1);
+            merging = true;
+            mid = min(leftStart + currentSize - 1, static_cast<int>(numbers.size()) - 1);
+            rightEnd = min(leftStart + 2 * currentSize - 1, static_cast<int>(numbers.size()) - 1);
             return;
         } else {
-            mergeSubarray(leftStart, mid, rightEnd);
-            inSubMerge = false;
-            leftStart += 2 * subarraySize;
-            if (isArraySorted(data))
-                finished = true;
+            mergeSection(leftStart, mid, rightEnd);
+            merging = false;
+            leftStart += 2 * currentSize;
+            if (isSorted(numbers))
+                done = true;
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // During merge, highlight indices in the current subarray being merged.
-        if (inSubMerge && index >= leftStart && index <= rightEnd)
+    bool isIndexActive(int idx) const override {
+        if (merging && idx >= leftStart && idx <= rightEnd)
             return true;
         return false;
     }
 
 private:
-    int subarraySize;
-    bool inSubMerge;
+    int currentSize;
+    bool merging;
     int leftStart, mid, rightEnd;
-    vector<int> mergeTemp;
+    vector<int> temp;
 
-    void mergeSubarray(int left, int mid, int right) {
+    void mergeSection(int left, int mid, int right) {
         int i = left, j = mid + 1, k = left;
         while (i <= mid && j <= right) {
-            comparisons++;
-            if (data[i] <= data[j])
-                mergeTemp[k++] = data[i++];
+            numComparisons++;
+            if (numbers[i] <= numbers[j])
+                temp[k++] = numbers[i++];
             else {
-                mergeTemp[k++] = data[j++];
-                swaps++;
+                temp[k++] = numbers[j++];
+                numSwaps++;
             }
         }
         while (i <= mid)
-            mergeTemp[k++] = data[i++];
+            temp[k++] = numbers[i++];
         while (j <= right)
-            mergeTemp[k++] = data[j++];
+            temp[k++] = numbers[j++];
         for (int idx = left; idx <= right; idx++)
-            data[idx] = mergeTemp[idx];
+            numbers[idx] = temp[idx];
     }
 };
 
-// ------------------------------------------------------
+// -------------------------
 // Heap Sort Implementation
-// ------------------------------------------------------
-class HeapSorter : public Sorter {
+// -------------------------
+class HeapSort : public SortAlgorithm {
 public:
-    HeapSorter(vector<int>& dataRef)
-        : Sorter(dataRef), heapBuilt(false), heapifyIndex(static_cast<int>(data.size()) / 2 - 1), heapSize(static_cast<int>(data.size()))
+    HeapSort(vector<int>& nums)
+        : SortAlgorithm(nums), builtHeap(false), heapIndex(static_cast<int>(numbers.size()) / 2 - 1), heapSize(static_cast<int>(numbers.size()))
     {}
 
     void step() override {
-        if (!heapBuilt) {
-            if (heapifyIndex < 0) {
-                heapBuilt = true;
-                heapifyIndex = heapSize - 1;
+        if (!builtHeap) {
+            if (heapIndex < 0) {
+                builtHeap = true;
+                heapIndex = heapSize - 1;
                 return;
             }
-            heapify(heapSize, heapifyIndex);
-            heapifyIndex--;
+            heapify(heapSize, heapIndex);
+            heapIndex--;
         } else {
             if (heapSize <= 1) {
-                finished = true;
+                done = true;
                 return;
             }
-            swap(data[0], data[heapSize - 1]);
-            swaps++;
+            swap(numbers[0], numbers[heapSize - 1]);
+            numSwaps++;
             heapSize--;
             heapify(heapSize, 0);
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Always highlight the root (index 0) during heap sort.
-        return (index == 0);
+    bool isIndexActive(int idx) const override {
+        return (idx == 0);
     }
 
 private:
-    bool heapBuilt;
-    int heapifyIndex;
+    bool builtHeap;
+    int heapIndex;
     int heapSize;
 
     void heapify(int n, int i) {
@@ -402,46 +348,46 @@ private:
         int leftChild = 2 * i + 1;
         int rightChild = 2 * i + 2;
         if (leftChild < n) {
-            comparisons++;
-            if (data[leftChild] > data[largest])
+            numComparisons++;
+            if (numbers[leftChild] > numbers[largest])
                 largest = leftChild;
         }
         if (rightChild < n) {
-            comparisons++;
-            if (data[rightChild] > data[largest])
+            numComparisons++;
+            if (numbers[rightChild] > numbers[largest])
                 largest = rightChild;
         }
         if (largest != i) {
-            swap(data[i], data[largest]);
-            swaps++;
+            swap(numbers[i], numbers[largest]);
+            numSwaps++;
             heapify(n, largest);
         }
     }
 };
 
-// ------------------------------------------------------
+// ---------------------------
 // Selection Sort Implementation
-// ------------------------------------------------------
-class SelectionSorter : public Sorter {
+// ---------------------------
+class SelectionSort : public SortAlgorithm {
 public:
-    SelectionSorter(vector<int>& dataRef)
-        : Sorter(dataRef), i(0), j(0), minIndex(0)
+    SelectionSort(vector<int>& nums)
+        : SortAlgorithm(nums), i(0), j(0), minIndex(0)
     {}
 
     void step() override {
-        if (i >= static_cast<int>(data.size()) - 1) {
-            finished = true;
+        if (i >= static_cast<int>(numbers.size()) - 1) {
+            done = true;
             return;
         }
-        if (j < static_cast<int>(data.size())) {
-            comparisons++;
-            if (data[j] < data[minIndex])
+        if (j < static_cast<int>(numbers.size())) {
+            numComparisons++;
+            if (numbers[j] < numbers[minIndex])
                 minIndex = j;
             j++;
-            if (j >= static_cast<int>(data.size())) {
+            if (j >= static_cast<int>(numbers.size())) {
                 if (minIndex != i) {
-                    swap(data[i], data[minIndex]);
-                    swaps++;
+                    swap(numbers[i], numbers[minIndex]);
+                    numSwaps++;
                 }
                 i++;
                 j = i;
@@ -450,152 +396,149 @@ public:
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight the current minimum index and the current comparison index.
-        return (index == minIndex || index == j);
+    bool isIndexActive(int idx) const override {
+        return (idx == minIndex || idx == j);
     }
 
 private:
     int i, j, minIndex;
 };
 
-// ------------------------------------------------------
+// -------------------------
 // Shell Sort Implementation
-// ------------------------------------------------------
-class ShellSorter : public Sorter {
+// -------------------------
+class ShellSort : public SortAlgorithm {
 public:
-    ShellSorter(vector<int>& dataRef)
-        : Sorter(dataRef), gap(static_cast<int>(data.size()) / 2), i(gap), inInnerLoop(false), currentJ(0), temp(0)
+    ShellSort(vector<int>& nums)
+        : SortAlgorithm(nums), gap(static_cast<int>(numbers.size()) / 2), i(gap), inLoop(false), currentJ(0), tempVal(0)
     {}
 
     void step() override {
         if (gap < 1) {
-            finished = true;
+            done = true;
             return;
         }
-        if (!inInnerLoop) {
-            if (i < static_cast<int>(data.size())) {
-                temp = data[i];
+        if (!inLoop) {
+            if (i < static_cast<int>(numbers.size())) {
+                tempVal = numbers[i];
                 currentJ = i;
-                inInnerLoop = true;
+                inLoop = true;
             } else {
                 gap = gap / 2;
                 if (gap < 1) {
-                    finished = true;
+                    done = true;
                     return;
                 }
                 i = gap;
                 return;
             }
         }
-        if (inInnerLoop) {
+        if (inLoop) {
             if (currentJ >= gap) {
-                comparisons++;
-                if (data[currentJ - gap] > temp) {
-                    data[currentJ] = data[currentJ - gap];
-                    swaps++;
+                numComparisons++;
+                if (numbers[currentJ - gap] > tempVal) {
+                    numbers[currentJ] = numbers[currentJ - gap];
+                    numSwaps++;
                     currentJ -= gap;
                     return;
                 }
             }
-            data[currentJ] = temp;
-            inInnerLoop = false;
+            numbers[currentJ] = tempVal;
+            inLoop = false;
             i++;
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // If not in inner loop, highlight current index; if in inner loop, highlight the active index and its gap partner.
-        if (!inInnerLoop) {
-            return (index == i);
+    bool isIndexActive(int idx) const override {
+        if (!inLoop) {
+            return (idx == i);
         } else {
-            return (index == currentJ || (currentJ - gap >= 0 && index == currentJ - gap));
+            return (idx == currentJ || (currentJ - gap >= 0 && idx == currentJ - gap));
         }
     }
 
 private:
-    int gap, i, currentJ, temp;
-    bool inInnerLoop;
+    int gap, i, currentJ, tempVal;
+    bool inLoop;
 };
 
-// ------------------------------------------------------
+// ---------------------------
 // Cocktail Sort Implementation
-// ------------------------------------------------------
-class CocktailSorter : public Sorter {
+// ---------------------------
+class CocktailSort : public SortAlgorithm {
 public:
-    CocktailSorter(vector<int>& dataRef)
-        : Sorter(dataRef), start(0), end(static_cast<int>(data.size()) - 1), currentIndex(0), forward(true)
+    CocktailSort(vector<int>& nums)
+        : SortAlgorithm(nums), start(0), end(static_cast<int>(numbers.size()) - 1), currentIdx(0), forward(true)
     {
-        currentIndex = start;
+        currentIdx = start;
     }
 
     void step() override {
         if (start >= end) {
-            finished = true;
+            done = true;
             return;
         }
         if (forward) {
-            if (currentIndex < end) {
-                comparisons++;
-                if (data[currentIndex] > data[currentIndex + 1]) {
-                    swap(data[currentIndex], data[currentIndex + 1]);
-                    swaps++;
+            if (currentIdx < end) {
+                numComparisons++;
+                if (numbers[currentIdx] > numbers[currentIdx + 1]) {
+                    swap(numbers[currentIdx], numbers[currentIdx + 1]);
+                    numSwaps++;
                 }
-                currentIndex++;
+                currentIdx++;
             } else {
                 forward = false;
                 end--;
-                currentIndex = end;
+                currentIdx = end;
             }
         } else {
-            if (currentIndex > start) {
-                comparisons++;
-                if (data[currentIndex - 1] > data[currentIndex]) {
-                    swap(data[currentIndex - 1], data[currentIndex]);
-                    swaps++;
+            if (currentIdx > start) {
+                numComparisons++;
+                if (numbers[currentIdx - 1] > numbers[currentIdx]) {
+                    swap(numbers[currentIdx - 1], numbers[currentIdx]);
+                    numSwaps++;
                 }
-                currentIndex--;
+                currentIdx--;
             } else {
                 forward = true;
                 start++;
-                currentIndex = start;
+                currentIdx = start;
             }
         }
-        if (isArraySorted(data))
-            finished = true;
+        if (isSorted(numbers))
+            done = true;
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight the current index and its neighbor depending on the direction.
+    bool isIndexActive(int idx) const override {
         if (forward)
-            return (index == currentIndex || index == currentIndex + 1);
+            return (idx == currentIdx || idx == currentIdx + 1);
         else
-            return (index == currentIndex || index == currentIndex - 1);
+            return (idx == currentIdx || idx == currentIdx - 1);
     }
 
 private:
-    int start, end, currentIndex;
+    int start, end, currentIdx;
     bool forward;
 };
 
-// ------------------------------------------------------
+// ------------------------
 // Comb Sort Implementation
-// ------------------------------------------------------
-class CombSorter : public Sorter {
+// ------------------------
+class CombSort : public SortAlgorithm {
 public:
-    CombSorter(vector<int>& dataRef)
-        : Sorter(dataRef), gap(static_cast<int>(data.size())), currentIndex(0), swapped(false)
+    CombSort(vector<int>& nums)
+        : SortAlgorithm(nums), gap(static_cast<int>(numbers.size())), currentIdx(0), swapped(false)
     {}
 
     void step() override {
-        if (currentIndex < static_cast<int>(data.size()) - gap) {
-            comparisons++;
-            if (data[currentIndex] > data[currentIndex + gap]) {
-                swap(data[currentIndex], data[currentIndex + gap]);
-                swaps++;
+        if (currentIdx < static_cast<int>(numbers.size()) - gap) {
+            numComparisons++;
+            if (numbers[currentIdx] > numbers[currentIdx + gap]) {
+                swap(numbers[currentIdx], numbers[currentIdx + gap]);
+                numSwaps++;
                 swapped = true;
             }
-            currentIndex++;
+            currentIdx++;
         } else {
             if (gap > 1) {
                 gap = static_cast<int>(gap / 1.3f);
@@ -603,94 +546,92 @@ public:
                     gap = 1;
             }
             if (gap == 1 && !swapped)
-                finished = true;
-            currentIndex = 0;
+                done = true;
+            currentIdx = 0;
             swapped = false;
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
-        // Highlight current index and the element gap away.
-        return (index == currentIndex || index == currentIndex + gap);
+    bool isIndexActive(int idx) const override {
+        return (idx == currentIdx || idx == currentIdx + gap);
     }
 
 private:
-    int gap, currentIndex;
+    int gap, currentIdx;
     bool swapped;
 };
 
-// ------------------------------------------------------
+// --------------------------
 // Odd-Even Sort Implementation
-// ------------------------------------------------------
-class OddEvenSorter : public Sorter {
+// --------------------------
+class OddEvenSort : public SortAlgorithm {
 public:
-    OddEvenSorter(vector<int>& dataRef)
-        : Sorter(dataRef), phase(0), indexOffset(0), swapped(false)
+    OddEvenSort(vector<int>& nums)
+        : SortAlgorithm(nums), phase(0), offset(0), swapped(false)
     {}
 
     void step() override {
-        if (isArraySorted(data)) {
-            finished = true;
+        if (isSorted(numbers)) {
+            done = true;
             return;
         }
         int start = (phase == 0) ? 0 : 1;
-        if (indexOffset < static_cast<int>(data.size()) - 1) {
-            int idx = start + indexOffset;
-            if (idx + 1 < static_cast<int>(data.size())) {
-                comparisons++;
-                if (data[idx] > data[idx + 1]) {
-                    swap(data[idx], data[idx + 1]);
-                    swaps++;
+        if (offset < static_cast<int>(numbers.size()) - 1) {
+            int idx = start + offset;
+            if (idx + 1 < static_cast<int>(numbers.size())) {
+                numComparisons++;
+                if (numbers[idx] > numbers[idx + 1]) {
+                    swap(numbers[idx], numbers[idx + 1]);
+                    numSwaps++;
                     swapped = true;
                 }
             }
-            indexOffset++;
+            offset++;
         } else {
             if (!swapped)
-                finished = true;
-            indexOffset = 0;
+                done = true;
+            offset = 0;
             phase = 1 - phase;
             swapped = false;
         }
     }
 
-    bool isIndexHighlighted(int index) const override {
+    bool isIndexActive(int idx) const override {
         int start = (phase == 0) ? 0 : 1;
-        int currentIdx = start + indexOffset;
-        return (index == currentIdx || index == currentIdx + 1);
+        int current = start + offset;
+        return (idx == current || idx == current + 1);
     }
 
 private:
-    int phase;       // 0: even phase, 1: odd phase
-    int indexOffset; // current offset in the phase
+    int phase;
+    int offset;
     bool swapped;
 };
 
-// ------------------------------------------------------
-// SortingVisualizer: Manages the data, sorter and rendering
-// ------------------------------------------------------
+// ------------------------------------
+// Class managing the visualization
+// ------------------------------------
 class SortingVisualizer {
 public:
     SortingVisualizer()
         : window(nullptr),
-          numberOfBars(DEFAULT_NUMBER_OF_BARS),
-          sortDelay(DEFAULT_SORT_DELAY),
-          sortingActive(false),
-          paused(false),
-          sortFinished(false),
-          timeStopped(false),
-          finalTime(0.0),
-          currentAlgorithmIndex(0),
-          finalPassIndex(0),
-          lastFrameTime(0.0f),
+          numBars(kDefaultBarCount),
+          sortStepDelay(kDefaultSortDelay),
+          isSorting(false),
+          isPaused(false),
+          sortingComplete(false),
+          timerStopped(false),
+          finalSortTime(0.0),
+          currentAlgoIndex(0),
+          finalAnimationIndex(0),
+          lastFrameTimestamp(0.0f),
           waveMode(false)
     {
-        sortData.resize(numberOfBars);
-        displayHeights.resize(numberOfBars, 0.0f);
+        numbers.resize(numBars);
+        barHeights.resize(numBars, 0.0f);
     }
 
     ~SortingVisualizer() {
-        // Cleanup ImGui and GLFW
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -700,95 +641,83 @@ public:
         glfwTerminate();
     }
 
-    // Initialize GLFW, GLAD, ImGui and OpenGL objects.
-    bool initialize() {
+    bool init() {
         if (!glfwInit()) {
-            cerr << "Failed to initialize GLFW\n";
+            cerr << "Could not initialize GLFW\n";
             return false;
         }
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Sorting Visualization", nullptr, nullptr);
+        window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Sorting Visualizer", nullptr, nullptr);
         if (!window) {
-            cerr << "Failed to create GLFW window\n";
+            cerr << "Could not create GLFW window\n";
             glfwTerminate();
             return false;
         }
         glfwMakeContextCurrent(window);
-        glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+        glfwSetFramebufferSizeCallback(window, framebufferResize);
 
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
             cerr << "Failed to initialize GLAD\n";
             return false;
         }
 
-        // Initialize ImGui
+        // Setup ImGui
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        setCustomTheme();
+        setTheme();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330 core");
 
-        // Setup OpenGL objects (shaders, VAO, VBO)
         setupShaders();
-        setupBarQuad();
+        setupBarGeometry();
 
-        // Initialize default data and sorter
-        randomizeData();
-        resetSorterState();
+        randomizeNumbers();
+        resetAlgorithm();
 
-        // Initialize the frame time tracker for smooth interpolation.
-        lastFrameTime = static_cast<float>(glfwGetTime());
-
+        lastFrameTimestamp = static_cast<float>(glfwGetTime());
         return true;
     }
 
-    // Main loop: handles events, sorting steps and rendering.
     void run() {
-        bool spacePreviouslyPressed = false;
+        bool spaceWasPressed = false;
         sortStartTime = chrono::steady_clock::now();
         lastStepTime = sortStartTime;
-        finalPassLastUpdate = sortStartTime;
+        finalAnimLastUpdate = sortStartTime;
 
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
 
-            // Check for space key to toggle pause/resume.
             bool spacePressed = (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
-            if (spacePressed && !spacePreviouslyPressed && sortingActive)
-                paused = !paused;
-            spacePreviouslyPressed = spacePressed;
+            if (spacePressed && !spaceWasPressed && isSorting)
+                isPaused = !isPaused;
+            spaceWasPressed = spacePressed;
 
-            // Execute sorting step if active, not paused and not finished.
-            if (sortingActive && !paused && !sortFinished && !waveMode) {
+            if (isSorting && !isPaused && !sortingComplete && !waveMode) {
                 auto now = chrono::steady_clock::now();
-                if (chrono::duration_cast<chrono::milliseconds>(now - lastStepTime) >= sortDelay) {
-                    if (currentSorter)
-                        currentSorter->step();
+                if (chrono::duration_cast<chrono::milliseconds>(now - lastStepTime) >= sortStepDelay) {
+                    if (currentAlgorithm)
+                        currentAlgorithm->step();
                     lastStepTime = now;
-                    if (currentSorter && currentSorter->isFinished() && !timeStopped) {
-                        finalTime = chrono::duration_cast<chrono::milliseconds>(now - sortStartTime).count() / 1000.0;
-                        timeStopped = true;
-                        sortFinished = true;
+                    if (currentAlgorithm && currentAlgorithm->isDone() && !timerStopped) {
+                        finalSortTime = chrono::duration_cast<chrono::milliseconds>(now - sortStartTime).count() / 1000.0;
+                        timerStopped = true;
+                        sortingComplete = true;
                     }
                 }
             }
 
-            // Update display heights for smooth animation or wave mode.
-            updateDisplayHeights();
+            updateBarHeights();
 
-            // Handle final pass animation after sort is complete.
-            if (sortFinished && finalPassIndex < numberOfBars) {
+            if (sortingComplete && finalAnimationIndex < numBars) {
                 auto now = chrono::steady_clock::now();
-                // Increase finalPassIndex periodically
-                if (chrono::duration_cast<chrono::milliseconds>(now - finalPassLastUpdate).count() > 20) {
-                    finalPassIndex++;
-                    finalPassLastUpdate = now;
+                if (chrono::duration_cast<chrono::milliseconds>(now - finalAnimLastUpdate).count() > 20) {
+                    finalAnimationIndex++;
+                    finalAnimLastUpdate = now;
                 }
             }
 
-            // Render the ImGui interface and bars.
             render();
             glfwSwapBuffers(window);
         }
@@ -796,152 +725,129 @@ public:
 
 private:
     GLFWwindow* window;
-    int numberOfBars;
-    vector<int> sortData;         // Data to be sorted.
-    vector<float> displayHeights; // Current heights used for bar animation.
-    unique_ptr<Sorter> currentSorter; // Polymorphic sorter instance.
-    chrono::steady_clock::time_point sortStartTime, lastStepTime, finalPassLastUpdate;
-    chrono::milliseconds sortDelay;
-    bool sortingActive, paused, sortFinished, timeStopped;
-    double finalTime;
-    int currentAlgorithmIndex; // Selected algorithm index (from ImGui combo).
-    int finalPassIndex;        // Used for final pass animation.
-    float lastFrameTime;       // Tracks the last frame time for smooth interpolation.
+    int numBars;
+    vector<int> numbers;
+    vector<float> barHeights;
+    unique_ptr<SortAlgorithm> currentAlgorithm;
+    chrono::steady_clock::time_point sortStartTime, lastStepTime, finalAnimLastUpdate;
+    chrono::milliseconds sortStepDelay;
+    bool isSorting, isPaused, sortingComplete, timerStopped;
+    double finalSortTime;
+    int currentAlgoIndex;
+    int finalAnimationIndex;
+    float lastFrameTimestamp;
+    bool waveMode;
+    vector<int> comboSequence;
 
-    // --- Easter Egg State ---
-    bool waveMode;                  // When true, show wave animation.
-    vector<int> buttonCombo;        // Records the order of button presses.
-
-    // OpenGL objects for rendering bars.
     unsigned int shaderProgram, barVAO, barVBO;
 
-    // --------------------------------------------------
-    // Data Initialization Methods
-    // --------------------------------------------------
-
-    // Randomize data: fill with sorted numbers and then shuffle.
-    void randomizeData() {
-        sortData.resize(numberOfBars);
-        displayHeights.resize(numberOfBars, 0.0f);
-        for (int i = 0; i < numberOfBars; i++) {
-            sortData[i] = i + 1;
+    // -------------------------------
+    // Data generation functions
+    // -------------------------------
+    void randomizeNumbers() {
+        numbers.resize(numBars);
+        barHeights.resize(numBars, 0.0f);
+        for (int i = 0; i < numBars; i++) {
+            numbers[i] = i + 1;
         }
         random_device rd;
         mt19937 gen(rd());
-        shuffle(sortData.begin(), sortData.end(), gen);
+        shuffle(numbers.begin(), numbers.end(), gen);
     }
 
-    // Create a mountain pattern.
-    void mountainData() {
-        sortData.resize(numberOfBars);
-        displayHeights.resize(numberOfBars, 0.0f);
-        int mid = numberOfBars / 2;
-        for (int i = 0; i < numberOfBars; i++) {
+    void mountainNumbers() {
+        numbers.resize(numBars);
+        barHeights.resize(numBars, 0.0f);
+        int mid = numBars / 2;
+        for (int i = 0; i < numBars; i++) {
             if (i <= mid)
-                sortData[i] = i + 1;
+                numbers[i] = i + 1;
             else
-                sortData[i] = sortData[mid - (i - mid)];
+                numbers[i] = numbers[mid - (i - mid)];
         }
-        // Rescale to span from 1 to numberOfBars.
-        int currentMin = *min_element(sortData.begin(), sortData.end());
-        int currentMax = *max_element(sortData.begin(), sortData.end());
-        for (int i = 0; i < numberOfBars; i++) {
-            sortData[i] = 1 + (sortData[i] - currentMin) * (numberOfBars - 1) / (currentMax - currentMin);
+        int currentMin = *min_element(numbers.begin(), numbers.end());
+        int currentMax = *max_element(numbers.begin(), numbers.end());
+        for (int i = 0; i < numBars; i++) {
+            numbers[i] = 1 + (numbers[i] - currentMin) * (numBars - 1) / (currentMax - currentMin);
         }
     }
 
-    // Create a valley pattern.
-    void valleyData() {
-        sortData.resize(numberOfBars);
-        displayHeights.resize(numberOfBars, 0.0f);
-        int mid = numberOfBars / 2;
-        for (int i = 0; i < numberOfBars; i++) {
+    void valleyNumbers() {
+        numbers.resize(numBars);
+        barHeights.resize(numBars, 0.0f);
+        int mid = numBars / 2;
+        for (int i = 0; i < numBars; i++) {
             if (i <= mid)
-                sortData[i] = mid - i + 1;
+                numbers[i] = mid - i + 1;
             else
-                sortData[i] = i - mid + 1;
+                numbers[i] = i - mid + 1;
         }
-        int currentMin = *min_element(sortData.begin(), sortData.end());
-        int currentMax = *max_element(sortData.begin(), sortData.end());
-        for (int i = 0; i < numberOfBars; i++) {
-            sortData[i] = 1 + (sortData[i] - currentMin) * (numberOfBars - 1) / (currentMax - currentMin);
-        }
-    }
-
-    // Create reverse-sorted data.
-    void reverseData() {
-        sortData.resize(numberOfBars);
-        displayHeights.resize(numberOfBars, 0.0f);
-        for (int i = 0; i < numberOfBars; i++) {
-            sortData[i] = numberOfBars - i;
+        int currentMin = *min_element(numbers.begin(), numbers.end());
+        int currentMax = *max_element(numbers.begin(), numbers.end());
+        for (int i = 0; i < numBars; i++) {
+            numbers[i] = 1 + (numbers[i] - currentMin) * (numBars - 1) / (currentMax - currentMin);
         }
     }
 
-    // --------------------------------------------------
-    // Sorter and State Reset
-    // --------------------------------------------------
-    void resetSorterState() {
-        sortFinished = false;
-        timeStopped = false;
-        finalTime = 0.0;
-        paused = false;
-        finalPassIndex = 0;
+    void reverseNumbers() {
+        numbers.resize(numBars);
+        barHeights.resize(numBars, 0.0f);
+        for (int i = 0; i < numBars; i++) {
+            numbers[i] = numBars - i;
+        }
+    }
+
+    void resetAlgorithm() {
+        sortingComplete = false;
+        timerStopped = false;
+        finalSortTime = 0.0;
+        isPaused = false;
+        finalAnimationIndex = 0;
         sortStartTime = chrono::steady_clock::now();
         lastStepTime = sortStartTime;
-        finalPassLastUpdate = sortStartTime;
-        // Create a new sorter based on the selected algorithm.
-        createSorter(currentAlgorithmIndex);
+        finalAnimLastUpdate = sortStartTime;
+        createAlgorithm(currentAlgoIndex);
     }
 
-    void createSorter(int algoIndex) {
-        // Use polymorphism to instantiate the correct sorter.
-        switch(algoIndex) {
-            case 0: currentSorter = make_unique<BubbleSorter>(sortData); break;
-            case 1: currentSorter = make_unique<InsertionSorter>(sortData); break;
-            case 2: currentSorter = make_unique<QuickSorter>(sortData); break;
-            case 3: currentSorter = make_unique<MergeSorter>(sortData); break;
-            case 4: currentSorter = make_unique<HeapSorter>(sortData); break;
-            case 5: currentSorter = make_unique<SelectionSorter>(sortData); break;
-            case 6: currentSorter = make_unique<ShellSorter>(sortData); break;
-            case 7: currentSorter = make_unique<CocktailSorter>(sortData); break;
-            case 8: currentSorter = make_unique<CombSorter>(sortData); break;
-            case 9: currentSorter = make_unique<OddEvenSorter>(sortData); break;
-            default: currentSorter = make_unique<BubbleSorter>(sortData); break;
+    void createAlgorithm(int index) {
+        switch(index) {
+            case 0: currentAlgorithm = make_unique<BubbleSort>(numbers); break;
+            case 1: currentAlgorithm = make_unique<InsertionSort>(numbers); break;
+            case 2: currentAlgorithm = make_unique<QuickSort>(numbers); break;
+            case 3: currentAlgorithm = make_unique<MergeSort>(numbers); break;
+            case 4: currentAlgorithm = make_unique<HeapSort>(numbers); break;
+            case 5: currentAlgorithm = make_unique<SelectionSort>(numbers); break;
+            case 6: currentAlgorithm = make_unique<ShellSort>(numbers); break;
+            case 7: currentAlgorithm = make_unique<CocktailSort>(numbers); break;
+            case 8: currentAlgorithm = make_unique<CombSort>(numbers); break;
+            case 9: currentAlgorithm = make_unique<OddEvenSort>(numbers); break;
+            default: currentAlgorithm = make_unique<BubbleSort>(numbers); break;
         }
     }
 
-    // --------------------------------------------------
-    // Easter Egg: Record Button Presses and Check Combo
-    // --------------------------------------------------
-    void recordButtonPress(int code) {
-        buttonCombo.push_back(code);
-        // Keep only the last 6 button presses
-        if(buttonCombo.size() > 6)
-            buttonCombo.erase(buttonCombo.begin());
-        // Check for combo: Randomize(0), Mountain(1), Mountain(1), Valley(2), Reverse(3), Valley(2)
-        if(buttonCombo.size() == 6 &&
-           buttonCombo[0] == 0 &&
-           buttonCombo[1] == 1 &&
-           buttonCombo[2] == 1 &&
-           buttonCombo[3] == 2 &&
-           buttonCombo[4] == 3 &&
-           buttonCombo[5] == 2) {
+    void recordCombo(int code) {
+        comboSequence.push_back(code);
+        if(comboSequence.size() > 6)
+            comboSequence.erase(comboSequence.begin());
+        if(comboSequence.size() == 6 &&
+           comboSequence[0] == 0 &&
+           comboSequence[1] == 1 &&
+           comboSequence[2] == 1 &&
+           comboSequence[3] == 2 &&
+           comboSequence[4] == 3 &&
+           comboSequence[5] == 2) {
             waveMode = true;
-            // Clear the combo after triggering wave mode.
-            buttonCombo.clear();
+            comboSequence.clear();
         }
     }
 
-    // --------------------------------------------------
-    // OpenGL and ImGui Rendering Helpers
-    // --------------------------------------------------
-
-    // GLFW framebuffer resize callback.
-    static void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    // -------------------------------
+    // OpenGL and ImGui setup functions
+    // -------------------------------
+    static void framebufferResize(GLFWwindow* window, int width, int height) {
         glViewport(0, 0, width, height);
     }
 
-    // Compile a shader from source.
     unsigned int compileShader(unsigned int type, const char* source) {
         unsigned int shader = glCreateShader(type);
         glShaderSource(shader, 1, &source, nullptr);
@@ -951,14 +857,13 @@ private:
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if(!success) {
             glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-            cerr << "Shader compile error:\n" << infoLog << endl;
+            cerr << "Shader compilation failed:\n" << infoLog << endl;
         }
         return shader;
     }
 
-    // Setup the shader program for drawing bars.
     void setupShaders() {
-        const char* vertexShaderSource = R"(
+        const char* vertexSource = R"(
         #version 330 core
         layout(location=0) in vec2 aPos;
         uniform mat4 uMVP;
@@ -966,7 +871,7 @@ private:
             gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
         }
         )";
-        const char* fragmentShaderSource = R"(
+        const char* fragmentSource = R"(
         #version 330 core
         out vec4 FragColor;
         uniform vec4 uColor;
@@ -974,26 +879,25 @@ private:
             FragColor = uColor;
         }
         )";
-        unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-        unsigned int fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+        unsigned int vertShader = compileShader(GL_VERTEX_SHADER, vertexSource);
+        unsigned int fragShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
         shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
+        glAttachShader(shaderProgram, vertShader);
+        glAttachShader(shaderProgram, fragShader);
         glLinkProgram(shaderProgram);
         int success;
         char infoLog[512];
         glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
         if(!success) {
             glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-            cerr << "Shader program link error:\n" << infoLog << endl;
+            cerr << "Shader program linking failed:\n" << infoLog << endl;
         }
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
+        glDeleteShader(vertShader);
+        glDeleteShader(fragShader);
     }
 
-    // Setup the VAO and VBO for a single bar quad.
-    void setupBarQuad() {
-        float barQuadVertices[] = {
+    void setupBarGeometry() {
+        float vertices[] = {
             0.0f, 0.0f,
             1.0f, 0.0f,
             1.0f, 1.0f,
@@ -1005,14 +909,13 @@ private:
         glGenBuffers(1, &barVBO);
         glBindVertexArray(barVAO);
         glBindBuffer(GL_ARRAY_BUFFER, barVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(barQuadVertices), barQuadVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
         glBindVertexArray(0);
     }
 
-    // Set a custom dark theme for ImGui.
-    void setCustomTheme() {
+    void setTheme() {
         ImGuiStyle& style = ImGui::GetStyle();
         ImVec4* colors = style.Colors;
         colors[ImGuiCol_WindowBg]         = ImVec4(0.10f, 0.12f, 0.15f, 1.00f);
@@ -1035,159 +938,150 @@ private:
         colors[ImGuiCol_TabActive]        = ImVec4(0.20f, 0.50f, 0.80f, 1.00f);
     }
 
-    // --------------------------------------------------
-    // Update display heights based on current sort data or wave mode.
-    // --------------------------------------------------
-    void updateDisplayHeights() {
+    // -------------------------------
+    // Update bar heights for animation
+    // -------------------------------
+    void updateBarHeights() {
         int fbWidth, fbHeight;
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         float minHeight = 10.0f;
         float maxHeight = fbHeight * 0.9f;
         float currentTime = static_cast<float>(glfwGetTime());
 
-        // If wave mode is active, use a sine wave for the bar heights.
         if(waveMode) {
             float base = (minHeight + maxHeight) / 2.0f;
             float amplitude = (maxHeight - minHeight) / 4.0f;
             float speed = 2.0f;
             float phaseOffset = 0.5f;
-            for (int i = 0; i < numberOfBars; i++) {
-                displayHeights[i] = base + amplitude * sin(currentTime * speed + i * phaseOffset);
+            for (int i = 0; i < numBars; i++) {
+                barHeights[i] = base + amplitude * sin(currentTime * speed + i * phaseOffset);
             }
             return;
         }
 
-        // Otherwise, smoothly animate from the current displayHeights to the target.
-        float dt = currentTime - lastFrameTime;
-        lastFrameTime = currentTime;
-        float interpolationFactor = 1 - exp(-10.0f * dt);
+        float dt = currentTime - lastFrameTimestamp;
+        lastFrameTimestamp = currentTime;
+        float interpFactor = 1 - exp(-10.0f * dt);
 
-        for (int i = 0; i < numberOfBars; i++) {
-            float targetHeight = minHeight + (maxHeight - minHeight) * ((sortData[i] - 1) / float(numberOfBars - 1));
-            displayHeights[i] = glm::mix(displayHeights[i], targetHeight, interpolationFactor);
+        for (int i = 0; i < numBars; i++) {
+            float target = minHeight + (maxHeight - minHeight) * ((numbers[i] - 1) / float(numBars - 1));
+            barHeights[i] = glm::mix(barHeights[i], target, interpFactor);
         }
     }
 
-    // --------------------------------------------------
-    // Render the GUI and the sorting bars.
-    // --------------------------------------------------
+    // -------------------------------
+    // Render the UI and bars
+    // -------------------------------
     void render() {
-        // Start new ImGui frame.
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // ImGui Window with Tabs for Controls, Settings, Statistics, and About.
         ImGui::Begin("Sorting Visualizer");
-        if (ImGui::BeginTabBar("MainTabBar")) {
+        if (ImGui::BeginTabBar("Tabs")) {
             if (ImGui::BeginTabItem("Controls")) {
-                // If wave mode is active, show a special UI.
                 if(waveMode) {
-                    ImGui::Text("Wave Mode Activated!");
+                    ImGui::Text("Wave Mode Active!");
                     if(ImGui::Button("Exit Wave Mode")) {
                         waveMode = false;
-                        buttonCombo.clear();
-                        randomizeData();
-                        resetSorterState();
-                        sortingActive = false;
+                        comboSequence.clear();
+                        randomizeNumbers();
+                        resetAlgorithm();
+                        isSorting = false;
                     }
-                } else if (!sortingActive) {
-                    // Select sorting algorithm.
-                    if (ImGui::BeginCombo("Algorithm", ALGORITHM_NAMES[currentAlgorithmIndex])) {
-                        for (int n = 0; n < IM_ARRAYSIZE(ALGORITHM_NAMES); n++) {
-                            bool isSelected = (currentAlgorithmIndex == n);
-                            if (ImGui::Selectable(ALGORITHM_NAMES[n], isSelected))
-                                currentAlgorithmIndex = n;
+                } else if (!isSorting) {
+                    if (ImGui::BeginCombo("Algorithm", algorithmNames[currentAlgoIndex])) {
+                        for (int n = 0; n < IM_ARRAYSIZE(algorithmNames); n++) {
+                            bool isSelected = (currentAlgoIndex == n);
+                            if (ImGui::Selectable(algorithmNames[n], isSelected))
+                                currentAlgoIndex = n;
                             if (isSelected)
                                 ImGui::SetItemDefaultFocus();
                         }
                         ImGui::EndCombo();
                     }
-                    // Pattern buttons
                     if (ImGui::Button("Randomize")) {
-                        randomizeData();
-                        resetSorterState();
-                        recordButtonPress(0); // Code 0 for Randomize
+                        randomizeNumbers();
+                        resetAlgorithm();
+                        recordCombo(0);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Mountain")) {
-                        mountainData();
-                        resetSorterState();
-                        recordButtonPress(1); // Code 1 for Mountain
+                        mountainNumbers();
+                        resetAlgorithm();
+                        recordCombo(1);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Valley")) {
-                        valleyData();
-                        resetSorterState();
-                        recordButtonPress(2); // Code 2 for Valley
+                        valleyNumbers();
+                        resetAlgorithm();
+                        recordCombo(2);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Reverse")) {
-                        reverseData();
-                        resetSorterState();
-                        recordButtonPress(3); // Code 3 for Reverse
+                        reverseNumbers();
+                        resetAlgorithm();
+                        recordCombo(3);
                     }
-                    // Start sorting
                     if (ImGui::Button("Start")) {
-                        createSorter(currentAlgorithmIndex);
-                        resetSorterState();
-                        sortingActive = true;
-                        paused = false;
+                        createAlgorithm(currentAlgoIndex);
+                        resetAlgorithm();
+                        isSorting = true;
+                        isPaused = false;
                         sortStartTime = chrono::steady_clock::now();
                         lastStepTime = sortStartTime;
                     }
                 } else {
-                    // Sorting is active
-                    if (!paused) {
+                    if (!isPaused) {
                         if (ImGui::Button("Pause"))
-                            paused = true;
+                            isPaused = true;
                     } else {
                         if (ImGui::Button("Resume")) {
-                            paused = false;
+                            isPaused = false;
                             lastStepTime = chrono::steady_clock::now();
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Step"))
-                            if (currentSorter) currentSorter->step();
+                            if (currentAlgorithm) currentAlgorithm->step();
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Reset")) {
-                        resetSorterState();
-                        sortingActive = false;
-                        paused = false;
+                        resetAlgorithm();
+                        isSorting = false;
+                        isPaused = false;
                     }
                 }
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Choose a pattern and start the sort");
+                    ImGui::SetTooltip("Choose a pattern and start sorting");
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Settings")) {
-                static float delayMs = float(sortDelay.count());
+                static float delayMs = float(sortStepDelay.count());
                 if (ImGui::SliderFloat("Sort Speed (ms)", &delayMs, 1.0f, 100.0f, "%.0f"))
-                    sortDelay = chrono::milliseconds(int(delayMs));
-                static int bars = numberOfBars;
+                    sortStepDelay = chrono::milliseconds(int(delayMs));
+                static int bars = numBars;
                 if (ImGui::SliderInt("Number of Bars", &bars, 10, 300)) {
-                    if (bars != numberOfBars) {
-                        numberOfBars = bars;
-                        randomizeData();
-                        resetSorterState();
+                    if (bars != numBars) {
+                        numBars = bars;
+                        randomizeNumbers();
+                        resetAlgorithm();
                     }
                 }
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Statistics")) {
-                ImGui::Text("Algorithm: %s", ALGORITHM_NAMES[currentAlgorithmIndex]);
-                double elapsedSeconds = 0.0;
-                if (sortFinished && timeStopped)
-                    elapsedSeconds = finalTime;
-                else if (sortingActive && !paused) {
+                ImGui::Text("Algorithm: %s", algorithmNames[currentAlgoIndex]);
+                double elapsed = 0.0;
+                if (sortingComplete && timerStopped)
+                    elapsed = finalSortTime;
+                else if (isSorting && !isPaused) {
                     auto now = chrono::steady_clock::now();
-                    elapsedSeconds = chrono::duration_cast<chrono::milliseconds>(now - sortStartTime).count() / 1000.0;
+                    elapsed = chrono::duration_cast<chrono::milliseconds>(now - sortStartTime).count() / 1000.0;
                 }
-                ImGui::Text("Time: %.2f s", elapsedSeconds);
-                if (currentSorter) {
-                    ImGui::Text("Comparisons: %lld", currentSorter->getComparisons());
-                    ImGui::Text("Swaps:       %lld", currentSorter->getSwaps());
+                ImGui::Text("Time: %.2f s", elapsed);
+                if (currentAlgorithm) {
+                    ImGui::Text("Comparisons: %lld", currentAlgorithm->getComparisons());
+                    ImGui::Text("Swaps:       %lld", currentAlgorithm->getSwaps());
                 }
                 float progress = 0.0f;
                 ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
@@ -1195,19 +1089,9 @@ private:
             }
             if (ImGui::BeginTabItem("About")) {
                 ImGui::BeginChild("AboutChild", ImVec2(400, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
-                ImGui::TextWrapped("%s", ALGORITHM_DETAILS[currentAlgorithmIndex]);
+                ImGui::TextWrapped("%s", algorithmDescriptions[currentAlgoIndex]);
                 ImGui::Spacing();
-                ImGui::TextWrapped("Time Complexity:\n"
-                                   "Bubble Sort: O(n^2)\n"
-                                   "Insertion Sort: O(n^2) (O(n) best-case)\n"
-                                   "Quick Sort: O(n log n) average\n"
-                                   "Merge Sort: O(n log n)\n"
-                                   "Heap Sort: O(n log n)\n"
-                                   "Selection Sort: O(n^2)\n"
-                                   "Shell Sort: ~O(n log^2 n)\n"
-                                   "Cocktail Sort: O(n^2)\n"
-                                   "Comb Sort: O(n^2) worst-case\n"
-                                   "Odd-Even Sort: O(n^2)");
+                ImGui::TextWrapped("Time Complexity:\nBubble Sort: O(n^2)\nInsertion Sort: O(n^2) (O(n) best-case)\nQuick Sort: O(n log n) average\nMerge Sort: O(n log n)\nHeap Sort: O(n log n)\nSelection Sort: O(n^2)\nShell Sort: ~O(n log^2 n)\nCocktail Sort: O(n^2)\nComb Sort: O(n^2) worst-case\nOdd-Even Sort: O(n^2)");
                 ImGui::EndChild();
                 ImGui::EndTabItem();
             }
@@ -1215,11 +1099,9 @@ private:
         }
         ImGui::End();
 
-        // Clear screen.
         glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Setup projection for 2D rendering.
         int fbWidth, fbHeight;
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         glm::mat4 projection = glm::ortho(0.0f, float(fbWidth), 0.0f, float(fbHeight), -1.0f, 1.0f);
@@ -1228,87 +1110,63 @@ private:
         int locMVP = glGetUniformLocation(shaderProgram, "uMVP");
         int locColor = glGetUniformLocation(shaderProgram, "uColor");
 
-        // Get mouse position for hover effect.
         double mouseX, mouseY;
         glfwGetCursorPos(window, &mouseX, &mouseY);
         float oglMouseY = float(fbHeight) - float(mouseY);
-        float barWidth = (fbWidth - (numberOfBars + 1) * BAR_GAP) / float(numberOfBars);
+        float barWidth = (fbWidth - (numBars + 1) * kBarGap) / float(numBars);
 
-        // Draw each bar.
-        for (int i = 0; i < numberOfBars; i++) {
-            float xPos = BAR_GAP + i * (barWidth + BAR_GAP);
-            float barHeight = displayHeights[i];
+        for (int i = 0; i < numBars; i++) {
+            float xPos = kBarGap + i * (barWidth + kBarGap);
+            float height = barHeights[i];
 
-            // Draw shadow.
             {
                 glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos + 2.0f, 2.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(barWidth, barHeight, 1.0f));
+                model = glm::scale(model, glm::vec3(barWidth, height, 1.0f));
                 glm::mat4 mvp = projection * model;
                 glUniformMatrix4fv(locMVP, 1, GL_FALSE, glm::value_ptr(mvp));
                 glUniform4f(locColor, 0.1f, 0.1f, 0.1f, 0.5f);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             }
 
-            // Determine bar color.
-            glm::vec4 barColor(0.9f, 0.9f, 0.9f, 1.0f);
+            glm::vec4 color(0.9f, 0.9f, 0.9f, 1.0f);
 
-            // If sorting not finished, highlight current indices in red.
-            if (!sortFinished) {
-                if (currentSorter && currentSorter->isIndexHighlighted(i)) {
-                    barColor = glm::vec4(0.8f, 0.2f, 0.2f, 1.0f);
+            if (!sortingComplete) {
+                if (currentAlgorithm && currentAlgorithm->isIndexActive(i)) {
+                    color = glm::vec4(0.8f, 0.2f, 0.2f, 1.0f);
                 }
-            }
-            else {
-                // Sorting finished: bars are white unless in final pass region.
-                barColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-                // If i <= finalPassIndex, apply a pulsing lighter green.
-                if (i <= finalPassIndex) {
-                    // Create a pulsing effect
-                    float t = float(glfwGetTime()) * 5.0f;  // Adjust speed as needed
+            } else {
+                color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                if (i <= finalAnimationIndex) {
+                    float t = float(glfwGetTime()) * 5.0f;
                     float pulse = 0.5f + 0.5f * sin(t);
-
-                    // Base lighter green color
-                    glm::vec4 baseColor(0.4f, 0.9f, 0.4f, 1.0f);
-
-                    // We'll vary brightness slightly between 80% and 100%
-                    float brightnessFactor = 0.8f + 0.2f * pulse;
-
-                    barColor = glm::vec4(baseColor.r * brightnessFactor,
-                                         baseColor.g * brightnessFactor,
-                                         baseColor.b * brightnessFactor,
-                                         1.0f);
+                    glm::vec4 base(0.4f, 0.9f, 0.4f, 1.0f);
+                    float brightness = 0.8f + 0.2f * pulse;
+                    color = glm::vec4(base.r * brightness, base.g * brightness, base.b * brightness, 1.0f);
                 }
             }
 
-            // Apply hover effect (slight yellow tint) on top of current color.
-            bool isHover = (mouseX >= xPos && mouseX <= xPos + barWidth && oglMouseY <= barHeight);
-            if (isHover) {
-                barColor = glm::mix(barColor, glm::vec4(1.0f, 1.0f, 0.7f, 1.0f), 0.5f);
+            bool hover = (mouseX >= xPos && mouseX <= xPos + barWidth && oglMouseY <= height);
+            if (hover) {
+                color = glm::mix(color, glm::vec4(1.0f, 1.0f, 0.7f, 1.0f), 0.5f);
             }
 
-            glUniform4fv(locColor, 1, &barColor[0]);
+            glUniform4fv(locColor, 1, &color[0]);
 
-            // Set model transform and draw the bar.
             glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(barWidth, barHeight, 1.0f));
+            model = glm::scale(model, glm::vec3(barWidth, height, 1.0f));
             glm::mat4 mvp = projection * model;
             glUniformMatrix4fv(locMVP, 1, GL_FALSE, glm::value_ptr(mvp));
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
 
-        // Render ImGui on top.
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 };
 
-// ------------------------------------------------------
-// Main Entry Point
-// ------------------------------------------------------
 int main() {
     SortingVisualizer visualizer;
-    if (!visualizer.initialize())
+    if (!visualizer.init())
         return -1;
     visualizer.run();
     return 0;
