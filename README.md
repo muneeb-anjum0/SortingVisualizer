@@ -162,7 +162,7 @@ This project is licensed under the **MIT License**.
 ## Contact
 If you have any questions or suggestions, feel free to reach out:
 - **Email:** muneeb.anjum@hotmail.com
-- **GitHub:** [your-github-username](https://github.com/YOUR_USERNAME)
+- **GitHub:** https://github.com/muneeb-anjum0
 - **LinkedIn:** https://www.linkedin.com/in/muneeb-anjum-a9386625a/
 
 ---
