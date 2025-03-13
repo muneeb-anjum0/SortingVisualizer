@@ -4,6 +4,7 @@
 Sorting Algorithm Visualizer is an interactive application that demonstrates various sorting algorithms in real-time using **OpenGL**, **GLFW**, **GLM**, and **Dear ImGui**. The project enables users to select different sorting algorithms, adjust sorting speed, and analyze their performance.
 
 This tool serves as an **educational aid** for students, programmers, and algorithm enthusiasts to understand sorting techniques through **dynamic visual representation** and **Object-Oriented Programming (OOP)** concepts.
+![Demo](https://github.com/user-attachments/assets/a403f7a5-5670-4373-ba2c-816ba87711b4)
 
 ## Features
 - **Real-time visualization** of sorting algorithms.
